@@ -1,0 +1,36 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f8f9fa;
+  margin: 2rem;
+}
+
+h1 {
+  text-align: center;
+}
+
+#status {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #555;
+}
+
+.hidden {
+  display: none;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+  background: white;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+}
+
+th, td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.estado.programada { color: #007bff; font-weight: bold; }
+.estado.realizada { color: #28a745; font-weight: bold; }
+.estado.cancelada { color: #dc3545; font-weight: bold; }

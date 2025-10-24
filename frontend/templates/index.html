@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis citas</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="container mt-5">
+
+  <h1 class="mb-4 text-center">Mis Citas Médicas</h1>
+  <p>Bienvenido, <span id="nombre-usuario"></span>👋</p>
+
+  <div class="text-center mb-4">
+    <button id="btn-nueva-cita" class="btn btn-success">➕ Nueva cita</button>
+    <button id="btn-salir" class="btn btn-outline-danger">Cerrar sesión</button>
+  </div>
+
+  <div id="formulario-cita" class="card p-3 mb-4 d-none">
+    <h5>Crear nueva cita</h5>
+    <form id="form-nueva-cita" class="row g-3">
+      <div class="mb-3">
+        <label for="nombre_cita" class="form-label">Tipo de cita</label>
+        <select id="nombre_cita" class="form-select" required>
+          <option value="">Selecciona una especialidad</option>
+          <option value="Pediatría">Pediatría</option>
+          <option value="Oncología">Oncología</option>
+          <option value="Cardiología">Cardiología</option>
+          <option value="Traumatología">Traumatología</option>
+          <option value="Medicina General">Medicina General</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label for="fecha_hora" class="form-label">Fecha y hora</label>
+        <input type="datetime-local" class="form-control" id="fecha_hora" required>
+      </div>
+      <div class="col-md-6 align-self-end">
+        <button type="submit" class="btn btn-primary w-100">Guardar cita</button>
+      </div>
+    </form>
+  </div>
+
+  <p id="mensaje-aviso" class="alert d-none"></p>
+  
+  <div id="status" class="alert alert-info text-center">Cargando citas...</div>
+
+  <div id="modal-editar" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Cita</h5>
+        </div>
+        <div class="modal-body">
+          <form id="formEditar">
+            <input type="hidden" id="edit-id">
+            <div class="mb-3">
+              <label>Especialidad</label>
+              <select id="edit-nombre-cita" class="form-select" required>
+                <option value="Pediatría">Pediatría</option>
+                <option value="Oncología">Oncología</option>
+                <option value="Cardiología">Cardiología</option>
+                <option value="Traumatología">Traumatología</option>
+                <option value="Medicina General">Medicina General</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label>Fecha y hora</label>
+              <input type="datetime-local" id="edit-fecha-hora" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label>Estado</label>
+              <select id="edit-estado" class="form-select">
+                <option value="programada">Programada</option>
+                <option value="cancelada">Cancelada</option>
+                <option value="realizada">Realizada</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button id="btnGuardarEdicion" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <table id="tabla-citas" class="table table-striped d-none">
+    <thead>
+      <tr>
+        <th>Paciente</th>
+        <th>Tipo Cita</th>
+        <th>Fecha</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="citas-body"></tbody>
+  </table>
+
+  <script src="/static/js/main.js">
+
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">
+
+  </script>
+
+</body>
+
+</html>
