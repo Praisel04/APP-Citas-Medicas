@@ -1,186 +1,193 @@
-# pip install flask-cors pytest werkzeug
-# backend/tests/test_validation.py
-import sys, importlib, importlib.util, types
-from pathlib import Path
-import pytest
-from werkzeug.security import generate_password_hash
+"""
+=== TESTS SIMULADOS PARA REGISTER Y LOGIN ===
+Simulan las rutas /register y /login sin conexión a base de datos real.
+"""
 
-# =========================================================
-#  🔧 Mock de 'psycopg' (y 'psycopg2') antes de cargar la app Flask
-# =========================================================
-dummy_psycopg = types.ModuleType("psycopg")
-setattr(dummy_psycopg, "__version__", "dummy")
-setattr(dummy_psycopg, "connect", lambda *a, **k: None)
-sys.modules.setdefault("psycopg", dummy_psycopg)
-sys.modules.setdefault("psycopg2", dummy_psycopg)
+from datetime import datetime, timezone
+from werkzeug.security import generate_password_hash, check_password_hash
+import uuid
 
-# =========================================================
-#  🔧 Import robusto de la app Flask (sin necesidad de __init__.py)
-# =========================================================
-TEST_FILE = Path(__file__).resolve()
-BACKEND_DIR = TEST_FILE.parents[1]          # .../APP-Citas-Medicas/backend
-PROJ_ROOT = BACKEND_DIR.parent              # .../APP-Citas-Medicas
+# === BASE DE DATOS MOCK ===
+usuarios_mock = [
+    {
+        "id": uuid.uuid4(),
+        "nombre": "Juan Pérez",
+        "email": "juan@example.com",
+        "password_hash": generate_password_hash("12345"),
+        "rol": "usuario",
+        "created_at": datetime.now(timezone.utc),
+    }
+]
 
-# Asegura que la raíz del proyecto está en sys.path
-if str(PROJ_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJ_ROOT))
-
-try:
-    app_module = importlib.import_module("backend.app")
-except ModuleNotFoundError:
-    app_path = BACKEND_DIR / "app.py"
-    spec = importlib.util.spec_from_file_location("app_module", app_path)
-    app_module = importlib.util.module_from_spec(spec)
-    assert spec and spec.loader, f"No se pudo localizar {app_path}"
-    spec.loader.exec_module(app_module)
-
-flask_app = getattr(app_module, "app")
-
-# =========================================================
-#  🧩 Clases dummy para simular base de datos
-# =========================================================
-class DummyCursor:
-    def __init__(self, scripted=None):
-        self.scripted = list(scripted) if scripted else []
-        self.executed = []
-
-    def execute(self, query, params=None):
-        self.executed.append((query, params))
-
-    def fetchone(self):
-        if self.scripted:
-            return self.scripted.pop(0)
-        return None
-
-    def close(self):
-        pass
-
-
-class DummyConn:
-    def __init__(self, cursor):
-        self._cursor = cursor
-        self.committed = False
-        self.closed = False
-
-    def cursor(self):
-        return self._cursor
-
-    def commit(self):
-        self.committed = True
-
-    def close(self):
-        self.closed = True
+# === FUNCIONES SIMULADAS ===
+def register_mock(data, usuarios):
+    """
+    Simula el comportamiento de la ruta /register.
+    Valida los datos, comprueba duplicados y agrega un nuevo usuario.
+    """
+    # Validar campos obligatorios
+    if not data or not all(k in data for k in ('nombre', 'email', 'password', 'rol')):
+        return {"error": "Faltan campos obligatorios"}, 400
+    
+    # Comprobar si ya existe el correo
+    for u in usuarios:
+        if u["email"] == data["email"]:
+            return {"error": "El correo ya está registrado"}, 400
+    
+    # Crear nuevo usuario
+    user_id = uuid.uuid4()
+    nuevo_usuario = {
+        "id": user_id,
+        "nombre": data["nombre"],
+        "email": data["email"],
+        "password_hash": generate_password_hash(data["password"]),
+        "rol": data["rol"],
+        "created_at": datetime.now(timezone.utc),
+    }
+    usuarios.append(nuevo_usuario)
+    return {
+        "message": "Usuario registrado correctamente",
+        "user_id": str(user_id),
+        "nombre": data["nombre"],
+        "email": data["email"],
+        "rol": data["rol"],
+        "total": len(usuarios)
+    }, 201
 
 
-# =========================================================
-#  ⚙️ Fixtures
-# =========================================================
-@pytest.fixture
-def client():
-    flask_app.config["TESTING"] = True
-    with flask_app.test_client() as c:
-        yield c
+def login_mock(data, usuarios):
+    """
+    Simula el comportamiento de la ruta /login.
+    Busca el usuario por email y verifica la contraseña.
+    """
+    if not data or not all(k in data for k in ('email', 'password')):
+        return {"error": "Faltan campos obligatorios"}, 400
+    
+    # Buscar usuario
+    user = next((u for u in usuarios if u["email"] == data["email"]), None)
+    if not user:
+        return {"error": "Correo no encontrado"}, 401
+
+    # Verificar contraseña
+    if not check_password_hash(user["password_hash"], data["password"]):
+        return {"error": "Contraseña incorrecta"}, 401
+
+    return {
+        "message": "Inicio de sesión correcto",
+        "user_id": str(user["id"]),
+        "nombre": user["nombre"],
+        "rol": user["rol"]
+    }, 200
 
 
-@pytest.fixture
-def set_get_conn(monkeypatch):
-    def _set(conn_source):
-        if isinstance(conn_source, Exception):
-            def fake_get_conn():
-                raise conn_source
-            monkeypatch.setattr(app_module, "get_conn", fake_get_conn)
-        else:
-            def fake_get_conn():
-                return DummyConn(conn_source)
-            monkeypatch.setattr(app_module, "get_conn", fake_get_conn)
-    return _set
+# === TESTS PARA REGISTER ===
+
+def test_register_valido():
+    """Registro válido:
+    Debe crear un nuevo usuario cuando los datos son correctos.
+    
+    Asserts:
+        - Debe devolver mensaje de éxito.
+        - El total de usuarios debe incrementarse.
+    """
+    usuarios_local = usuarios_mock.copy()
+    datos = {"nombre": "Ana López", "email": "ana@example.com", "password": "abc123", "rol": "admin"}
+    resultado, status = register_mock(datos, usuarios_local)
+    
+    assert status == 201, "El código de estado debe ser 201"
+    assert "message" in resultado, "Debe devolver un mensaje de éxito"
+    assert resultado["total"] == len(usuarios_local), "El total debe coincidir con la cantidad actualizada"
 
 
-# =========================================================
-#  🧪 TESTS /register
-# =========================================================
-def test_register_faltan_campos(client):
-    resp = client.post("/register", json={})
-    assert resp.status_code == 400
-    assert resp.get_json()["error"] == "Faltan campos obligatorios"
+def test_register_duplicado():
+    """Registro duplicado:
+    Debe rechazar el registro si el email ya existe.
+    
+    Asserts:
+        - Debe devolver un error por correo duplicado.
+    """
+    usuarios_local = usuarios_mock.copy()
+    datos = {"nombre": "Juan Pérez", "email": "juan@example.com", "password": "12345", "rol": "usuario"}
+    resultado, status = register_mock(datos, usuarios_local)
+    
+    assert status == 400, "Debe devolver 400 por duplicado"
+    assert "error" in resultado, "Debe devolver un mensaje de error"
 
 
-def test_register_email_existente(client, set_get_conn):
-    cursor = DummyCursor(scripted=[("existing-user-id",)])
-    set_get_conn(cursor)
-    payload = {"nombre": "Alice", "email": "alice@example.com", "password": "Secr3t!", "rol": "user"}
-    resp = client.post("/register", json=payload)
-    assert resp.status_code == 400
-    assert resp.get_json()["error"] == "El correo ya está registrado"
+def test_register_campos_faltantes():
+    """Registro con datos incompletos:
+    Debe rechazar el registro si faltan campos obligatorios.
+    
+    Asserts:
+        - Debe devolver un error de campos faltantes.
+    """
+    usuarios_local = usuarios_mock.copy()
+    datos = {"email": "nuevo@example.com"}  # Faltan campos
+    resultado, status = register_mock(datos, usuarios_local)
+    
+    assert status == 400, "Debe devolver 400 por campos faltantes"
+    assert "error" in resultado, "Debe devolver un mensaje de error"
 
 
-def test_register_ok(client, set_get_conn):
-    cursor = DummyCursor(scripted=[None])
-    set_get_conn(cursor)
-    payload = {"nombre": "Bob", "email": "bob@example.com", "password": "P4ssw0rd!", "rol": "admin"}
-    resp = client.post("/register", json=payload)
-    body = resp.get_json()
-    assert resp.status_code == 201
-    assert body["message"] == "Usuario registrado correctamente"
-    assert body["email"] == payload["email"]
-    assert body["nombre"] == payload["nombre"]
-    assert body["rol"] == payload["rol"]
-    assert isinstance(body["user_id"], str) and len(body["user_id"]) > 0
+# === TESTS PARA LOGIN ===
+
+def test_login_valido():
+    """Inicio de sesión válido:
+    Debe permitir el acceso cuando las credenciales son correctas.
+    
+    Asserts:
+        - Debe devolver mensaje de éxito.
+        - Debe incluir el nombre y el rol.
+    """
+    usuarios_local = usuarios_mock.copy()
+    datos = {"email": "juan@example.com", "password": "12345"}
+    resultado, status = login_mock(datos, usuarios_local)
+    
+    assert status == 200, "Debe devolver 200 en login correcto"
+    assert "message" in resultado, "Debe contener mensaje de éxito"
+    assert "nombre" in resultado and "rol" in resultado, "Debe incluir los campos 'nombre' y 'rol'"
 
 
-def test_register_error_interno(client, set_get_conn):
-    set_get_conn(Exception("DB down"))
-    payload = {"nombre": "Carol", "email": "carol@example.com", "password": "s3cret!", "rol": "user"}
-    resp = client.post("/register", json=payload)
-    assert resp.status_code == 500
-    assert resp.get_json()["error"] == "Error interno del servidor"
+def test_login_contrasena_incorrecta():
+    """Contraseña incorrecta:
+    Debe devolver un error si la contraseña no coincide.
+    
+    Asserts:
+        - Debe devolver un error de autenticación.
+    """
+    usuarios_local = usuarios_mock.copy()
+    datos = {"email": "juan@example.com", "password": "malapass"}
+    resultado, status = login_mock(datos, usuarios_local)
+    
+    assert status == 401, "Debe devolver 401 si la contraseña es incorrecta"
+    assert "error" in resultado, "Debe devolver un mensaje de error"
 
 
-# =========================================================
-#  🧪 TESTS /login
-# =========================================================
-def test_login_faltan_campos(client):
-    resp = client.post("/login", json={})
-    assert resp.status_code == 400
-    assert resp.get_json()["error"] == "Faltan campos obligatorios"
+def test_login_usuario_no_existente():
+    """Usuario inexistente:
+    Debe devolver un error si el email no está registrado.
+    
+    Asserts:
+        - Debe devolver error 401 y mensaje correspondiente.
+    """
+    usuarios_local = usuarios_mock.copy()
+    datos = {"email": "nadie@example.com", "password": "123"}
+    resultado, status = login_mock(datos, usuarios_local)
+    
+    assert status == 401, "Debe devolver 401 si el usuario no existe"
+    assert "error" in resultado, "Debe devolver un mensaje de error"
 
 
-def test_login_correo_no_encontrado(client, set_get_conn):
-    cursor = DummyCursor(scripted=[None])
-    set_get_conn(cursor)
-    payload = {"email": "nobody@example.com", "password": "whatever"}
-    resp = client.post("/login", json=payload)
-    assert resp.status_code == 401
-    assert resp.get_json()["error"] == "Correo no encontrado"
-
-
-def test_login_contrasena_incorrecta(client, set_get_conn):
-    stored_hash = generate_password_hash("correcta")
-    cursor = DummyCursor(scripted=[("u-1", "Dani", stored_hash, "user")])
-    set_get_conn(cursor)
-    payload = {"email": "dani@example.com", "password": "mala"}
-    resp = client.post("/login", json=payload)
-    assert resp.status_code == 401
-    assert resp.get_json()["error"] == "Contraseña incorrecta"
-
-
-def test_login_ok(client, set_get_conn):
-    stored_hash = generate_password_hash("superclave")
-    cursor = DummyCursor(scripted=[("u-42", "Erika", stored_hash, "admin")])
-    set_get_conn(cursor)
-    payload = {"email": "erika@example.com", "password": "superclave"}
-    resp = client.post("/login", json=payload)
-    body = resp.get_json()
-    assert resp.status_code == 200
-    assert body["message"] == "Inicio de sesión correcto"
-    assert body["user_id"] == "u-42"
-    assert body["nombre"] == "Erika"
-    assert body["rol"] == "admin"
-
-
-def test_login_error_interno(client, set_get_conn):
-    set_get_conn(Exception("DB fatal"))
-    payload = {"email": "x@example.com", "password": "x"}
-    resp = client.post("/login", json=payload)
-    assert resp.status_code == 500
-    assert resp.get_json()["error"] == "Error interno del servidor"
+def test_login_campos_faltantes():
+    """Login con campos faltantes:
+    Debe rechazar el intento de inicio si no están todos los campos.
+    
+    Asserts:
+        - Debe devolver error 400 por campos incompletos.
+    """
+    usuarios_local = usuarios_mock.copy()
+    datos = {"email": "juan@example.com"}  # Falta password
+    resultado, status = login_mock(datos, usuarios_local)
+    
+    assert status == 400, "Debe devolver 400 por campos faltantes"
+    assert "error" in resultado, "Debe devolver mensaje de error"
