@@ -1,207 +1,92 @@
 """
-=== TESTS DE INTEGRACIÓN PARA /register Y /login ===
+=== TESTS DE INTEGRACIÓN VÍA HTTP ===
+Prueban las rutas /register y /login contra el servidor Flask en ejecución.
+No acceden directamente a la base de datos, solo usan peticiones HTTP reales.
 """
 
-import os
-import sys
+import requests
 import pytest
 import uuid
-from werkzeug.security import generate_password_hash
 
-# 🔧 Asegurar que la raíz del proyecto esté en el path (compatible con Windows y Anaconda)
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-
-from backend.app import app  # ✅ Import correcto del Flask app
+# URL base del backend Flask (no el frontend)
+BASE_URL = "http://localhost:8000"
 
 
-@pytest.fixture
-def client():
-    """Fixture que provee un cliente de prueba Flask."""
-    app.config["TESTING"] = True
-    app.config["DEBUG"] = False
-    with app.test_client() as client:
-        yield client
+def test_backend_disponible():
+    """Verifica que el backend esté disponible antes de correr las pruebas."""
+    try:
+        resp = requests.get(f"{BASE_URL}/")
+        assert resp.status_code in (200, 404), (
+            f"El backend no está accesible en {BASE_URL}. "
+            "Asegúrate de ejecutar 'flask run --port=8000' o 'python app.py'."
+        )
+    except requests.exceptions.ConnectionError:
+        pytest.fail(f"No se pudo conectar con el backend en {BASE_URL}")
 
 
-# ===============================
-# === TESTS PARA /register ===
-# ===============================
+@pytest.fixture(scope="session")
+def email_unico():
+    """Genera un email único por sesión de test para evitar duplicados."""
+    return f"test_{uuid.uuid4().hex[:6]}@example.com"
 
-def test_register_valido(client, monkeypatch):
-    """Registro exitoso:
-    Verifica que un usuario nuevo pueda registrarse correctamente."""
 
-    # Simulamos que el correo NO existe en la base de datos
-    def mock_get_conn():
-        class MockCursor:
-            def execute(self, query, params=None):
-                self.last_query = query
-                self.last_params = params
-                if "SELECT id FROM usuario" in query:
-                    self.result = None  # no hay usuario duplicado
-                elif "INSERT INTO usuario" in query:
-                    self.result = [(str(uuid.uuid4()),)]
-            def fetchone(self): return self.result
-            def close(self): pass
-        class MockConn:
-            def cursor(self): return MockCursor()
-            def commit(self): pass
-            def close(self): pass
-        return MockConn()
-
-    monkeypatch.setattr("backend.app.get_conn", mock_get_conn)
-
-    payload = {
-        "nombre": "Carlos",
-        "email": "carlos@example.com",
-        "password": "abc123",
+# === 1. REGISTRO EXITOSO ===
+def test_registro_exitoso(email_unico):
+    """Debe crear correctamente un nuevo usuario."""
+    datos = {
+        "nombre": "Usuario Integración",
+        "email": email_unico,
+        "password": "Clave123!",
         "rol": "usuario"
     }
-
-    response = client.post("/register", json=payload)
-    data = response.get_json()
-
-    assert response.status_code == 201
-    assert "message" in data
-    assert data["rol"] == "usuario"
+    resp = requests.post(f"{BASE_URL}/register", json=datos)
+    assert resp.status_code == 201, f"Esperado 201, recibido {resp.status_code}"
+    body = resp.json()
+    assert "message" in body and body["message"] == "Usuario registrado correctamente"
+    assert body["email"] == email_unico
 
 
-def test_register_duplicado(client, monkeypatch):
-    """Registro duplicado:
-    Verifica que el endpoint devuelva error si el correo ya existe."""
-
-    def mock_get_conn():
-        class MockCursor:
-            def execute(self, query, params=None):
-                if "SELECT id FROM usuario" in query:
-                    self.result = ("existing-id",)
-            def fetchone(self): return self.result
-            def close(self): pass
-        class MockConn:
-            def cursor(self): return MockCursor()
-            def close(self): pass
-        return MockConn()
-
-    monkeypatch.setattr("backend.app.get_conn", mock_get_conn)
-
-    payload = {
-        "nombre": "Juan",
-        "email": "juan@example.com",
-        "password": "abc123",
+# === 2. REGISTRO FALLIDO (EMAIL REPETIDO) ===
+def test_registro_fallido_email_repetido(email_unico):
+    """Debe rechazar el registro si el email ya existe."""
+    datos = {
+        "nombre": "Duplicado",
+        "email": email_unico,
+        "password": "Clave456!",
         "rol": "usuario"
     }
-
-    response = client.post("/register", json=payload)
-    data = response.get_json()
-
-    assert response.status_code == 400
-    assert "error" in data
+    resp = requests.post(f"{BASE_URL}/register", json=datos)
+    assert resp.status_code == 400, f"Esperado 400, recibido {resp.status_code}"
+    body = resp.json()
+    assert "error" in body and body["error"] == "El correo ya está registrado"
 
 
-def test_register_campos_faltantes(client):
-    """Campos faltantes:
-    Debe devolver error 400 si faltan campos en el body."""
-    payload = {"email": "incompleto@example.com"}  # faltan campos
-    response = client.post("/register", json=payload)
-    data = response.get_json()
-
-    assert response.status_code == 400
-    assert "error" in data
-
-
-# ===============================
-# === TESTS PARA /login ===
-# ===============================
-
-def test_login_exitoso(client, monkeypatch):
-    """Login exitoso:
-    Verifica que un usuario existente pueda autenticarse."""
-
-    password_hash = generate_password_hash("abc123")
-
-    def mock_get_conn():
-        class MockCursor:
-            def execute(self, query, params=None):
-                if "SELECT id, nombre,password_hash, rol" in query:
-                    self.result = (uuid.uuid4(), "Carlos", password_hash, "usuario")
-            def fetchone(self): return self.result
-            def close(self): pass
-        class MockConn:
-            def cursor(self): return MockCursor()
-            def close(self): pass
-        return MockConn()
-
-    monkeypatch.setattr("backend.app.get_conn", mock_get_conn)
-
-    payload = {"email": "carlos@example.com", "password": "abc123"}
-    response = client.post("/login", json=payload)
-    data = response.get_json()
-
-    assert response.status_code == 200
-    assert "message" in data
-    assert data["nombre"] == "Carlos"
+# === 3. LOGIN EXITOSO ===
+def test_login_exitoso(email_unico):
+    """Debe permitir el acceso si las credenciales son correctas."""
+    datos = {"email": email_unico, "password": "Clave123!"}
+    resp = requests.post(f"{BASE_URL}/login", json=datos)
+    assert resp.status_code == 200, f"Esperado 200, recibido {resp.status_code}"
+    body = resp.json()
+    assert "message" in body and body["message"] == "Inicio de sesión correcto"
+    assert "user_id" in body and "rol" in body
 
 
-def test_login_contrasena_incorrecta(client, monkeypatch):
-    """Contraseña incorrecta:
-    Debe devolver 401 si la contraseña no coincide."""
-
-    wrong_hash = generate_password_hash("otra_pass")
-
-    def mock_get_conn():
-        class MockCursor:
-            def execute(self, query, params=None):
-                if "SELECT id, nombre,password_hash, rol" in query:
-                    self.result = (uuid.uuid4(), "Carlos", wrong_hash, "usuario")
-            def fetchone(self): return self.result
-            def close(self): pass
-        class MockConn:
-            def cursor(self): return MockCursor()
-            def close(self): pass
-        return MockConn()
-
-    monkeypatch.setattr("backend.app.get_conn", mock_get_conn)
-
-    payload = {"email": "carlos@example.com", "password": "abc123"}
-    response = client.post("/login", json=payload)
-    data = response.get_json()
-
-    assert response.status_code == 401
-    assert "error" in data
+# === 4. LOGIN FALLIDO (USUARIO INEXISTENTE) ===
+def test_login_fallido_usuario_inexistente():
+    """Debe devolver error si el usuario no existe."""
+    datos = {"email": "no_existe_user@example.com", "password": "12345"}
+    resp = requests.post(f"{BASE_URL}/login", json=datos)
+    assert resp.status_code == 401, f"Esperado 401, recibido {resp.status_code}"
+    body = resp.json()
+    assert "error" in body and body["error"] == "Correo no encontrado"
 
 
-def test_login_usuario_no_encontrado(client, monkeypatch):
-    """Usuario no encontrado:
-    Verifica que devuelva 401 cuando el correo no existe."""
-
-    def mock_get_conn():
-        class MockCursor:
-            def execute(self, query, params=None):
-                if "SELECT id, nombre,password_hash, rol" in query:
-                    self.result = None  # no hay usuario
-            def fetchone(self): return self.result
-            def close(self): pass
-        class MockConn:
-            def cursor(self): return MockCursor()
-            def close(self): pass
-        return MockConn()
-
-    monkeypatch.setattr("backend.app.get_conn", mock_get_conn)
-
-    payload = {"email": "nadie@example.com", "password": "abc123"}
-    response = client.post("/login", json=payload)
-    data = response.get_json()
-
-    assert response.status_code == 401
-    assert "error" in data
-
-
-def test_login_campos_faltantes(client):
-    """Campos faltantes:
-    Debe devolver error 400 si falta email o password."""
-    payload = {"email": "user@example.com"}  # falta password
-    response = client.post("/login", json=payload)
-    data = response.get_json()
-
-    assert response.status_code == 400
-    assert "error" in data
+# === 5. LOGIN FALLIDO (CAMPOS INCOMPLETOS) ===
+def test_login_fallido_campos_incompletos():
+    """Debe devolver error si faltan campos obligatorios."""
+    datos = {"email": "falso@example.com"}  # Falta password
+    resp = requests.post(f"{BASE_URL}/login", json=datos)
+    assert resp.status_code == 400, f"Esperado 400, recibido {resp.status_code}"
+    body = resp.json()
+    assert "error" in body and body["error"] == "Faltan campos obligatorios"
