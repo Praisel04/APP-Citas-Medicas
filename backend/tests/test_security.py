@@ -1,8 +1,12 @@
 from backend.app import get_conn
-from backend.app import health
-
-def test_get_conn():
-    assert get_conn() is not None
+import psycopg2
 
 def test_health():
-    assert health() == {"status": "ok", "db": "up"}
+        try:
+            with get_conn() as conn, conn.cursor() as cur:
+                cur.execute("SELECT 1;")
+                cur.fetchone()
+            assert {"status": "ok", "db": "up"}, 200
+        
+        except Exception as e:
+            assert {"status": "degraded", "db": "down", "error": str(e)}, 503
