@@ -1,5 +1,5 @@
 from backend.app import get_conn
-import psycopg2
+
 
 def test_health():
         try:

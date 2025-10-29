@@ -1,5 +1,5 @@
 import pytest
-from tests.mock.mock_db import app, reset_mock_db
+from .mock.mock_db import app, reset_mock_db
 
 
 @pytest.fixture(autouse=True)
