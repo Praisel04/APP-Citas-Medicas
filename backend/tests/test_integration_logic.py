@@ -34,7 +34,7 @@ def test_crear_cita(client):
     nueva_cita = {
         "usuario_id": "11111111-1111-1111-1111-111111111111",
         "nombre_cita": "Consulta dermatología",
-        "fecha_hora": "2025-11-20T11:00:00Z"
+        "fecha_hora": "2025-11-20T11:00:00Z",
     }
     res = client.post("/citas", json=nueva_cita)
     data = res.get_json()

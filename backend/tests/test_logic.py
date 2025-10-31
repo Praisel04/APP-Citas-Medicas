@@ -34,22 +34,26 @@ def get_citas():
     """
     return citas_mock
 
+
 def test_get_citas():
     """
     Funcion de prueba para get_citas.
     Verifica que la funcion retorne una lista de citas con el formato correcto.
-    
+
     Asserts:
         - El resultado es una lista.
         - La lista contiene al menos una cita.
         - Cada cita tiene las claves esperadas: id, fecha, hora, paciente, medico, descripcion.
     """
-    
+
     resultado = get_citas()
     assert isinstance(resultado, list), "El resultado debe ser una lista"
     assert "nombre_cita" in resultado[0], "Cada cita debe tener una clave 'nombre_cita'"
-    assert resultado[0]["estado"] == "programada", "El estado de la cita debe ser 'programada'"
-    
+    assert (
+        resultado[0]["estado"] == "programada"
+    ), "El estado de la cita debe ser 'programada'"
+
+
 def crear_cita(citas, usuario_id, nombre_cita, fecha_hora):
     """Simula la creacion de una nueva cita en la base de datos.
 
@@ -62,10 +66,12 @@ def crear_cita(citas, usuario_id, nombre_cita, fecha_hora):
     Returns:
         dict: La nueva cita creada.
     """
-    
+
     if not nombre_cita or fecha_hora < datetime.now(timezone.utc):
-        return {"error": "Datos invalidos o fecha pasada"}  # Simula fallo en la creacion de la cita
-    
+        return {
+            "error": "Datos invalidos o fecha pasada"
+        }  # Simula fallo en la creacion de la cita
+
     nueva_cita = {
         "id": uuid.uuid4(),
         "usuario_id": usuario_id,
@@ -76,32 +82,40 @@ def crear_cita(citas, usuario_id, nombre_cita, fecha_hora):
         "updated_at": datetime.now(timezone.utc),
     }
     citas.append(nueva_cita)
-    return {"mensaje": "Cita creada exitosamente", "cita": nueva_cita, "total": len(citas)}
-    
+    return {
+        "mensaje": "Cita creada exitosamente",
+        "cita": nueva_cita,
+        "total": len(citas),
+    }
+
+
 def test_crear_cita_valida():
     """Cita valida:
     La funcion debe crear una cita correctamente cuando se proporcionan datos validos.
-    Se copian las citas mock para no alterar el estado global. Se usa la funcion crear_cita con datos validos. 
+    Se copian las citas mock para no alterar el estado global. Se usa la funcion crear_cita con datos validos.
     Se valida con asserts que la respuesta contiene un mensaje de exito y que el total de citas es correcto.
-    
+
     Asserts:
         - La respuesta contiene un mensaje de exito.
         - El total de citas debe ser igual al tamaño actualizado.
-        
+
     """
     citas_local = citas_mock.copy()
     usuario = uuid.uuid4()
     nueva_fecha = datetime.now(timezone.utc) + timedelta(days=2)
     resultado = crear_cita(citas_local, usuario, "Medicina General", nueva_fecha)
     assert "mensaje" in resultado, "Debe devolver un mensaje de exito"
-    assert resultado["total"] == len(citas_local), "El total debe coincidir con el tamaño actualizado"
-    
+    assert resultado["total"] == len(
+        citas_local
+    ), "El total debe coincidir con el tamaño actualizado"
+
+
 def test_crear_cita_invalida():
     """Cita invalida:
     La funcion debe manejar correctamente los datos invalidos.
     Se copian las citas mock para no alterar el estado global. Se usa la funcion crear_cita con datos invalidos (nombre vacio y fecha pasada).
     Se valida con asserts que la respuesta contiene un error.
-    
+
     Asserts:
         - La respuesta contiene un error.
     """
@@ -109,7 +123,9 @@ def test_crear_cita_invalida():
     usuario = uuid.uuid4()
     fecha_pasada = datetime.now(timezone.utc) - timedelta(days=1)
     resultado = crear_cita(citas_local, usuario, "", fecha_pasada)
-    assert "error" in resultado, "Debe devolver un error por datos inválidos o fecha antigua"
+    assert (
+        "error" in resultado
+    ), "Debe devolver un error por datos inválidos o fecha antigua"
 
 
 # === Función 3: EDITAR CITA ===
@@ -117,7 +133,7 @@ def editar_cita(citas, id_cita, nuevos_datos):
     """Editar Cita:
     La funcion simula la edicion de una cita existente en la base de datos.
     Se copian las citas mock para no alterar el estado global. Se busca la cita por ID y se actualizan los datos proporcionados.
-    
+
     Args:
         citas (_type_): Listado de las citas.
         id_cita (_type_): ID de la cita a editar.
@@ -136,10 +152,10 @@ def editar_cita(citas, id_cita, nuevos_datos):
 
 def test_editar_cita_existente():
     """Test Editar Cita:
-    
+
     Verifica que se pueda editar una cita existente correctamente.
     Se copian las citas mock para no alterar el estado global. Se edita el estado de una cita existente.
-    
+
     Asserts:
         - El estado de la cita debe cambiar al nuevo valor.
         - El campo updated_at debe ser actualizado.
@@ -149,16 +165,18 @@ def test_editar_cita_existente():
     id_existente = citas_local[0]["id"]
     nuevos_datos = {"estado": "cancelada"}
     resultado = editar_cita(citas_local, id_existente, nuevos_datos)
-    assert resultado["cita"]["estado"] == "cancelada", "El estado debe cambiar a 'cancelada'"
+    assert (
+        resultado["cita"]["estado"] == "cancelada"
+    ), "El estado debe cambiar a 'cancelada'"
     assert "updated_at" in resultado["cita"], "Debe actualizar el campo updated_at"
 
 
 def test_editar_cita_inexistente():
     """Test Editar Cita inexistente:
-    
+
     Se verifica que no se pueda editar una cita que no existe.
     Se copian las citas mock para no alterar el estado global. Se intenta editar una cita con un ID aleatorio que no existe.
-    
+
     Asserts:
         - Debe devolver un error indicando que la cita no fue encontrada.
     """
@@ -186,12 +204,11 @@ def eliminar_cita(citas, id_cita):
 
 
 def test_eliminar_cita_existente():
-    
     """Test Eliminar Cita Existente:
-    
+
     Verifica que se pueda eliminar una cita existente correctamente.
     Se copian las citas mock para no alterar el estado global. Se elimina una cita existente.
-    
+
     Asserts:
         - Debe devolver un mensaje dexito indicando que la cita fue eliminada.
         - Debe quedar una sola cita tras eliminar.
@@ -205,7 +222,7 @@ def test_eliminar_cita_existente():
 
 def test_eliminar_cita_inexistente():
     """Test Eliminar Cita Inexistente:
-    
+
     Verifica que no se pueda eliminar una cita que no existe.
     Se copian las citas mock para no alterar el estado global. Se intenta eliminar una cita con un ID aleatorio que no existe.
     Asserts:

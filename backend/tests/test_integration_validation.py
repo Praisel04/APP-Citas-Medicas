@@ -37,7 +37,7 @@ def test_registro_exitoso(email_unico):
         "nombre": "Usuario Integración",
         "email": email_unico,
         "password": "Clave123!",
-        "rol": "usuario"
+        "rol": "usuario",
     }
     resp = requests.post(f"{BASE_URL}/register", json=datos)
     assert resp.status_code == 201, f"Esperado 201, recibido {resp.status_code}"
@@ -53,7 +53,7 @@ def test_registro_fallido_email_repetido(email_unico):
         "nombre": "Duplicado",
         "email": email_unico,
         "password": "Clave456!",
-        "rol": "usuario"
+        "rol": "usuario",
     }
     resp = requests.post(f"{BASE_URL}/register", json=datos)
     assert resp.status_code == 400, f"Esperado 400, recibido {resp.status_code}"
