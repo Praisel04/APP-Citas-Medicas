@@ -28,7 +28,7 @@ jobs:
         run: |
           cd backend
           pip install -r requirements.txt
-          pip install pytest bandit
+          
 
       # 4️⃣ Ejecuta tests
       - name: Ejecutar tests con pytest

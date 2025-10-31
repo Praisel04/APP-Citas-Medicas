@@ -2,3 +2,4 @@
 [2025-10-31 18:19:11 +0100] - 11c4d4a - Autor: Ivan Seco - Mensaje: Prueba 1 de pre-commit con codigo reformateado por Black. Codigo Post-Commit modificado
 [2025-10-31 18:22:59 +0100] - 9404c3c - Autor: Ivan Seco - Mensaje: Pre-Commit y Post-Commit funcionan. Se ejecutan test unitarios y de integracion + escritura de logs
 [2025-10-31 18:48:02 +0100] - de3cac5 - Autor: Ivan Seco - Mensaje: Creacion del workflow para CICD. Pipeline de ejecucion y despliegue de la app.
+[2025-10-31 18:52:33 +0100] - 9358230 - Autor: Ivan Seco - Mensaje: Creacion del workflow para CICD. Pipeline de ejecucion y despliegue de la app.
