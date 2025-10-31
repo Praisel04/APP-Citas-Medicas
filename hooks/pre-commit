@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "Ejecutando pre-commit..."
+
+# Formatear el código con black
+black backend/ --check || exit 1
+
+# Ejecutar tests
+pytest backend/tests/ || exit 1
+echo "✓ Validación pre-commit" 
+
+exit 0

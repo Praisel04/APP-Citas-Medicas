@@ -1,0 +1,13 @@
+#!/bin/bash
+
+echo "Ejecutando pre-push..."
+
+# Ejecutar tests
+pytest backend/tests/ || { echo "❌ Tests fallidos. Push cancelado."; exit 1; }
+
+# Verificar seguridad con bandit
+bandit -r . || { echo "❌ Análisis de seguridad fallido."; exit 1; }
+
+echo "✓ Validaciones superadas. Push permitido."
+
+exit 0

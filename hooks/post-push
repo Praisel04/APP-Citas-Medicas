@@ -1,0 +1,17 @@
+#!/bin/bash
+
+echo "Push realizado."
+
+# Notificación local (Linux / Mac)
+notify-send "Push realizado" "Se han subido cambios al repositorio."
+
+echo "Ejecutando make docs para actualizar la documentación local..."
+make docs
+
+if [ $? -eq 0 ]; then
+    echo "Documentación local actualizada."
+else
+    echo "Fallo al ejecutar 'make docs'. El push fue exitoso, pero revisa la documentación."
+fi
+
+exit 0
