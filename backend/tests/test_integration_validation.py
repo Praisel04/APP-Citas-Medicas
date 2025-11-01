@@ -18,12 +18,13 @@ def client():
 # PRUEBAS PARA /register
 # ------------------------------
 
+
 def test_register_usuario_nuevo(client):
     nuevo_usuario = {
         "nombre": "Laura Pérez",
         "email": "laura@example.com",
         "password": "12345",
-        "rol": "paciente"
+        "rol": "paciente",
     }
 
     res = client.post("/register", json=nuevo_usuario)
@@ -41,7 +42,7 @@ def test_register_email_duplicado(client):
         "nombre": "Ana Duplicada",
         "email": "ana@example.com",
         "password": "nueva123",
-        "rol": "paciente"
+        "rol": "paciente",
     }
 
     res = client.post("/register", json=usuario_duplicado)
@@ -68,27 +69,24 @@ def test_register_faltan_campos(client):
 # PRUEBAS PARA /login
 # ------------------------------
 
+
 def test_login_exitoso(client):
     # Usuario existente en mock_db: ana@example.com / password 1234
-    credenciales = {
-        "email": "ana@example.com",
-        "password": "1234"
-    }
+    credenciales = {"email": "ana@example.com", "password": "1234"}
 
     res = client.post("/login", json=credenciales)
     data = res.get_json()
 
     assert res.status_code == 200
     assert data["message"] == "Inicio de sesión correcto"
-    assert data["email"] == credenciales["email"] if "email" in data else True  # opcional
+    assert (
+        data["email"] == credenciales["email"] if "email" in data else True
+    )  # opcional
     assert data["rol"] == "paciente"
 
 
 def test_login_email_inexistente(client):
-    credenciales = {
-        "email": "noexiste@example.com",
-        "password": "1234"
-    }
+    credenciales = {"email": "noexiste@example.com", "password": "1234"}
 
     res = client.post("/login", json=credenciales)
     data = res.get_json()
@@ -98,10 +96,7 @@ def test_login_email_inexistente(client):
 
 
 def test_login_password_incorrecta(client):
-    credenciales = {
-        "email": "ana@example.com",
-        "password": "incorrecta"
-    }
+    credenciales = {"email": "ana@example.com", "password": "incorrecta"}
 
     res = client.post("/login", json=credenciales)
     data = res.get_json()
