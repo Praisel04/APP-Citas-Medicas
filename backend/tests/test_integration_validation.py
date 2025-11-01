@@ -1,92 +1,123 @@
-"""
-=== TESTS DE INTEGRACIÓN VÍA HTTP ===
-Prueban las rutas /register y /login contra el servidor Flask en ejecución.
-No acceden directamente a la base de datos, solo usan peticiones HTTP reales.
-"""
-
-import requests
 import pytest
-import uuid
-
-# URL base del backend Flask (no el frontend)
-BASE_URL = "http://localhost:8000"
+from .mock.mock_db import app, reset_mock_db
 
 
-def test_backend_disponible():
-    """Verifica que el backend esté disponible antes de correr las pruebas."""
-    try:
-        resp = requests.get(f"{BASE_URL}/")
-        assert resp.status_code in (200, 404), (
-            f"El backend no está accesible en {BASE_URL}. "
-            "Asegúrate de ejecutar 'flask run --port=8000' o 'python app.py'."
-        )
-    except requests.exceptions.ConnectionError:
-        pytest.fail(f"No se pudo conectar con el backend en {BASE_URL}")
+@pytest.fixture(autouse=True)
+def setup_db():
+    reset_mock_db()
 
 
-@pytest.fixture(scope="session")
-def email_unico():
-    """Genera un email único por sesión de test para evitar duplicados."""
-    return f"test_{uuid.uuid4().hex[:6]}@example.com"
+@pytest.fixture
+def client():
+    app.config["TESTING"] = True
+    with app.test_client() as client:
+        yield client
 
 
-# === 1. REGISTRO EXITOSO ===
-def test_registro_exitoso(email_unico):
-    """Debe crear correctamente un nuevo usuario."""
-    datos = {
-        "nombre": "Usuario Integración",
-        "email": email_unico,
-        "password": "Clave123!",
-        "rol": "usuario",
+# ------------------------------
+# PRUEBAS PARA /register
+# ------------------------------
+
+def test_register_usuario_nuevo(client):
+    nuevo_usuario = {
+        "nombre": "Laura Pérez",
+        "email": "laura@example.com",
+        "password": "12345",
+        "rol": "paciente"
     }
-    resp = requests.post(f"{BASE_URL}/register", json=datos)
-    assert resp.status_code == 201, f"Esperado 201, recibido {resp.status_code}"
-    body = resp.json()
-    assert "message" in body and body["message"] == "Usuario registrado correctamente"
-    assert body["email"] == email_unico
+
+    res = client.post("/register", json=nuevo_usuario)
+    data = res.get_json()
+
+    assert res.status_code == 201
+    assert data["message"] == "Usuario registrado correctamente"
+    assert data["email"] == "laura@example.com"
+    assert data["rol"] == "paciente"
 
 
-# === 2. REGISTRO FALLIDO (EMAIL REPETIDO) ===
-def test_registro_fallido_email_repetido(email_unico):
-    """Debe rechazar el registro si el email ya existe."""
-    datos = {
-        "nombre": "Duplicado",
-        "email": email_unico,
-        "password": "Clave456!",
-        "rol": "usuario",
+def test_register_email_duplicado(client):
+    # Ya existe "ana@example.com" en el mock
+    usuario_duplicado = {
+        "nombre": "Ana Duplicada",
+        "email": "ana@example.com",
+        "password": "nueva123",
+        "rol": "paciente"
     }
-    resp = requests.post(f"{BASE_URL}/register", json=datos)
-    assert resp.status_code == 400, f"Esperado 400, recibido {resp.status_code}"
-    body = resp.json()
-    assert "error" in body and body["error"] == "El correo ya está registrado"
+
+    res = client.post("/register", json=usuario_duplicado)
+    data = res.get_json()
+
+    assert res.status_code == 400
+    assert "El correo ya está registrado" in data["error"]
 
 
-# === 3. LOGIN EXITOSO ===
-def test_login_exitoso(email_unico):
-    """Debe permitir el acceso si las credenciales son correctas."""
-    datos = {"email": email_unico, "password": "Clave123!"}
-    resp = requests.post(f"{BASE_URL}/login", json=datos)
-    assert resp.status_code == 200, f"Esperado 200, recibido {resp.status_code}"
-    body = resp.json()
-    assert "message" in body and body["message"] == "Inicio de sesión correcto"
-    assert "user_id" in body and "rol" in body
+def test_register_faltan_campos(client):
+    usuario_incompleto = {
+        "nombre": "Pedro"
+        # falta email, password, rol
+    }
+
+    res = client.post("/register", json=usuario_incompleto)
+    data = res.get_json()
+
+    assert res.status_code == 400
+    assert "Faltan campos obligatorios" in data["error"]
 
 
-# === 4. LOGIN FALLIDO (USUARIO INEXISTENTE) ===
-def test_login_fallido_usuario_inexistente():
-    """Debe devolver error si el usuario no existe."""
-    datos = {"email": "no_existe_user@example.com", "password": "12345"}
-    resp = requests.post(f"{BASE_URL}/login", json=datos)
-    assert resp.status_code == 401, f"Esperado 401, recibido {resp.status_code}"
-    body = resp.json()
-    assert "error" in body and body["error"] == "Correo no encontrado"
+# ------------------------------
+# PRUEBAS PARA /login
+# ------------------------------
+
+def test_login_exitoso(client):
+    # Usuario existente en mock_db: ana@example.com / password 1234
+    credenciales = {
+        "email": "ana@example.com",
+        "password": "1234"
+    }
+
+    res = client.post("/login", json=credenciales)
+    data = res.get_json()
+
+    assert res.status_code == 200
+    assert data["message"] == "Inicio de sesión correcto"
+    assert data["email"] == credenciales["email"] if "email" in data else True  # opcional
+    assert data["rol"] == "paciente"
 
 
-# === 5. LOGIN FALLIDO (CAMPOS INCOMPLETOS) ===
-def test_login_fallido_campos_incompletos():
-    """Debe devolver error si faltan campos obligatorios."""
-    datos = {"email": "falso@example.com"}  # Falta password
-    resp = requests.post(f"{BASE_URL}/login", json=datos)
-    assert resp.status_code == 400, f"Esperado 400, recibido {resp.status_code}"
-    body = resp.json()
-    assert "error" in body and body["error"] == "Faltan campos obligatorios"
+def test_login_email_inexistente(client):
+    credenciales = {
+        "email": "noexiste@example.com",
+        "password": "1234"
+    }
+
+    res = client.post("/login", json=credenciales)
+    data = res.get_json()
+
+    assert res.status_code == 401
+    assert "Correo no encontrado" in data["error"]
+
+
+def test_login_password_incorrecta(client):
+    credenciales = {
+        "email": "ana@example.com",
+        "password": "incorrecta"
+    }
+
+    res = client.post("/login", json=credenciales)
+    data = res.get_json()
+
+    assert res.status_code == 401
+    assert "Contraseña incorrecta" in data["error"]
+
+
+def test_login_faltan_campos(client):
+    credenciales_incompletas = {
+        "email": "ana@example.com"
+        # falta password
+    }
+
+    res = client.post("/login", json=credenciales_incompletas)
+    data = res.get_json()
+
+    assert res.status_code == 400
+    assert "Faltan campos obligatorios" in data["error"]
