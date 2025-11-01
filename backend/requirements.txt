@@ -6,4 +6,4 @@ Werkzeug
 black
 pytest
 requests
-dotoenv
+dotoenv==1.0.0
