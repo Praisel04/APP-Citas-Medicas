@@ -19,22 +19,17 @@ document.getElementById('formRegister').addEventListener('submit', async (event)
         const result = await response.json();
 
         if (response.ok) {
-            // ✅ Guardamos los datos para usarlos luego
+            // Guardamos los datos para usarlos luego
             localStorage.setItem("user_id", result.user_id);
             localStorage.setItem("nombre", nombre);
             localStorage.setItem("rol", rol);
 
-            // ✅ Mensaje visual de confirmación
+            // Mensaje visual de confirmación
             mensaje.textContent = result.message;
             mensaje.className = 'alert alert-success';
             mensaje.classList.remove('d-none');
 
-            // // ✅ Opcional: redirigir automáticamente tras unos segundos
-            // setTimeout(() => {
-            //     window.location.href = "./login.html";
-            // }, 2000);
-
-            // Limpieza del formulario
+            
             document.getElementById('formRegister').reset();
             console.log('Usuario registrado:', result);
             console.log('Rol asignado:', rol);

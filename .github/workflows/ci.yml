@@ -13,36 +13,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Clona el código del repositorio
+      # 1 Clona el código del repositorio
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
-      # 2️⃣ Instala Python
+      # 2 Instala Python
       - name: Configurar entorno Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'  # compatible con Bandit y pytest
 
-      # 3️⃣ Instala dependencias del backend
+      # 3 Instala dependencias del backend
       - name: Instalar dependencias
         run: |
           cd backend
           pip install -r requirements.txt
           
 
-      # 4️⃣ Ejecuta tests
+      # 4 Ejecuta tests
       - name: Ejecutar tests con pytest
         run: |
           cd backend
           pytest -v --maxfail=1 --disable-warnings
 
-      # 6️⃣ Construye la imagen Docker
+      # 5 Construye la imagen Docker
       - name: Construir imagen Docker
         run: |
           cd backend
           docker build -t app-citas-medicas:latest .
 
-      # 7️⃣ Simula el despliegue
+      # 6 Simula el despliegue
       - name: Simular despliegue en contenedor
         run: |
           echo "🚀 Desplegando contenedor app-citas-medicas..."

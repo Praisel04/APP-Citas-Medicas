@@ -6,16 +6,16 @@ services:
     container_name: citas_db
     restart: always
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "${DB_PORT}:5432"
     environment:
-      POSTGRES_USER: ${DB_OWNER:-postgres}
-      POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD:-postgrespass}
-      POSTGRES_DB: ${DB_NAME:-appdb}
+      POSTGRES_USER: ${DB_OWNER}
+      POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_OWNER:-postgres} -d ${DB_NAME:-appdb}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_OWNER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -33,7 +33,7 @@ services:
       DB_USER: ${APP_DB_USER}
       DB_PASSWORD: ${APP_DB_PASSWORD}
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "${BACKEND_PORT}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -50,7 +50,7 @@ services:
     container_name: citas_frontend
     restart: always
     ports:
-      - "${FRONTEND_PORT:-8080}:80"
+      - "${FRONTEND_PORT}:80"
     depends_on:
       - backend
     healthcheck:
