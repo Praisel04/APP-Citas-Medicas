@@ -1,18 +1,9 @@
-<h1 align="center">🏥 APP Citas Médicas</h1>
-<p align="center">
-  <em>Aplicación web contenedorizada desarrollada con Flask, PostgreSQL y Nginx, desplegada con Docker y validada mediante testing automatizado e integración continua (CI/CD).</em>
-</p>
+# 🏥 APP Citas Médicas
 
-<p align="center">
-  <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff&style=for-the-badge">
-  <img alt="Flask" src="https://img.shields.io/badge/Flask-000000?logo=flask&logoColor=fff&style=for-the-badge">
-  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=fff&style=for-the-badge">
-  <img alt="Nginx" src="https://img.shields.io/badge/Nginx-009639?logo=nginx&logoColor=fff&style=for-the-badge">
-  <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=fff&style=for-the-badge">
-  <img alt="Pytest" src="https://img.shields.io/badge/Pytest-0A9EDC?logo=pytest&logoColor=fff&style=for-the-badge">
-  <img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub%20Actions-2088FF?logo=githubactions&logoColor=fff&style=for-the-badge">
-</p>
+> Proyecto desarrollado como práctica integradora de DevOps, Docker y Testing Automatizado.  
+> Combina un backend en Flask, un frontend servido con Nginx y una base de datos PostgreSQL, todo orquestado mediante Docker Compose.
 
+---
 
 ## 📑 Índice
 - [🩺 Descripción general](#-descripción-general)
@@ -343,21 +334,7 @@ Para aislar los tests de la base de datos real, se desarrolló un entorno simula
 | **Security checks** | Passed | ✅ |
 | **CI/CD workflow** | Success | ✅ |
 
-## Evidencias visuales
-
-* **Pre Commit y Post Commit** ![alt text](image.png)
-* **Pre Push y Post Push** ![alt text](image-1.png)
-* **Registro Usuario** ![alt text](image-2.png)
-* **Inicio de sesion** ![alt text](image-3.png)
-* **Creación de citas (Paciente)** ![alt text](image-4.png)
-* **Visualización de citas (Paciente solo ve las suyas)** ![alt text](image-5.png)
-* **Eliminación de citas (Paciente)** ![alt text](image-6.png)
-* **Edición de citas (Paciente)** ![alt text](image-7.png)
-* **Visualización de citas (Médico ve todos los pacientes)** ![alt text](image-8.png)
-* **Eliminación de citas (Medico a paciente)** ![alt text](image-9.png)
-
-
-   Los tests verificaron correctamente las funcionalidades principales de la aplicación: **registro, login, CRUD de citas y control de roles.**
+Los tests verificaron correctamente las funcionalidades principales de la aplicación: **registro, login, CRUD de citas y control de roles.**
 
 ---
 
